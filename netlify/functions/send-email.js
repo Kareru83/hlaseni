@@ -48,11 +48,12 @@ exports.handler = async function (event, context) {
       statusCode: 200,
       body: JSON.stringify({ message: 'E-mail byl úspěšně odeslán.' }),
     };
-  } catch (err) {
-    console.error('❌ Chyba při odesílání:', err);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Nepodařilo se odeslat e-mail.' }),
-    };
-  }
+} catch (err) {
+  console.error('❌ Chyba při odesílání:', err);
+  return {
+    statusCode: 500,
+    body: JSON.stringify({ error: 'Nepodařilo se odeslat e-mail.', detail: err.message }),
+  };
+}
+
 };
