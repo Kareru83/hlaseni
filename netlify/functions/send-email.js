@@ -1,66 +1,86 @@
-const nodemailer = require('nodemailer');
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hlášení k ceníku</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script defer src="js/email.min.js"></script>
+  <script defer src="js/app.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Hlášení k ceníku</h1>
+    <img src="logo.png" alt="Logo" />
+  </header>
+  <main>
+    <form id="reportForm">
+      <label for="title">Název chyby</label>
+      <input type="text" id="title" name="title" required />
 
-exports.handler = async function(event, context) {
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: 'Method Not Allowed' })
-    };
-  }
+      <label for="date">Datum hlášení</label>
+      <input type="date" id="date" name="date" required />
 
-  let title, date, priority, description, images;
-  try {
-    const body = JSON.parse(event.body);
-    ({ title, date, priority, description, images } = body);
-    console.log('📥 Příchozí data:', body);
-  } catch (err) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: 'Nevalidní JSON vstup' })
-    };
-  }
+      <label for="priority">Priorita</label>
+      <select id="priority" name="priority">
+        <option value="Nízká">Nízká</option>
+        <option value="Střední">Střední</option>
+        <option value="Vysoká">Vysoká</option>
+      </select>
 
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.seznam.cz',
-    port: 465,
-    secure: true,
-    auth: {
-      user: 'm731633234@seznam.cz',
-      pass: 'M.432336137'
-    }
-  });
+      <label for="description">Popis problému</label>
+      <textarea id="description" name="description" rows="4" required></textarea>
 
-  try {
-    await transporter.verify();
-    console.log('✅ SMTP připojení OK');
-  } catch (error) {
-    console.error('❌ SMTP ověření selhalo:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'SMTP ověření selhalo: ' + error.message })
-    };
-  }
+      <label for="images">Připojit obrázky</label>
+      <input type="file" id="images" name="images" accept="image/*" multiple />
 
-  const mailOptions = {
-    from: 'm731633234@seznam.cz',
-    to: 'topaxi@seznam.cz',
-    subject: title,
-    text: `📅 Datum: ${date}\n⚠️ Priorita: ${priority}\n📝 Popis: ${description}`
+      <div id="preview"></div>
+
+      <button type="submit">Nahlásit</button>
+      <button type="button" id="test-button">Test</button>
+    </form>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+     document.getElementById('test-button').addEventListener('click', async () => {
+  const testData = {
+    title: '🧪 Testovací e-mail',
+    date: '2025-08-06',
+    priority: 'Nízká',
+    description: 'Toto je testovací zpráva pro ověření funkce.',
+    images: []
   };
 
-  console.log('📤 Odesílám e-mail na:', mailOptions.to);
-
   try {
-    await transporter.sendMail(mailOptions);
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ message: 'E-mail úspěšně odeslán!' })
-    };
-  } catch (error) {
-    console.error('❌ Chyba při odesílání:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message })
-    };
+    const response = await fetch('/.netlify/functions/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(testData)
+    });
+
+    const text = await response.text();
+    console.log('📦 Raw response:', text);
+
+    let result;
+    try {
+      result = JSON.parse(text);
+    } catch (err) {
+      alert('❌ Odpověď není validní JSON:\n' + text);
+      return;
+    }
+
+    if (response.ok) {
+      alert('✅ E-mail odeslán: ' + result.message);
+    } else {
+      alert('❌ Chyba: ' + result.error);
+    }
+  } catch (err) {
+    alert('⚠️ Chyba připojení: ' + err.message);
   }
-};
+});
+
+    });
+  </script>
+</body>
+</html>
