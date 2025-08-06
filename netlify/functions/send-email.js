@@ -31,8 +31,8 @@ exports.handler = async function (event, context) {
   });
 
   const mailOptions = {
-    from: '"Hlášení" <tvůj@email.cz>',
-    to: 'prijemce@email.cz',
+    from: '"Hlášení" <m731633234@seznam.cz>',
+    to: 'topaxi@seznam.cz',
     subject: `🛠️ Hlášení: ${title}`,
     text: `Datum: ${date}\nPriorita: ${priority}\n\nPopis:\n${description}`,
     attachments: images.map(img => ({
