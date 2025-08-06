@@ -1,86 +1,58 @@
-<!DOCTYPE html>
-<html lang="cs">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hlášení k ceníku</title>
-  <link rel="stylesheet" href="css/style.css" />
-  <script defer src="js/email.min.js"></script>
-  <script defer src="js/app.js"></script>
-</head>
-<body>
-  <header>
-    <h1>Hlášení k ceníku</h1>
-    <img src="logo.png" alt="Logo" />
-  </header>
-  <main>
-    <form id="reportForm">
-      <label for="title">Název chyby</label>
-      <input type="text" id="title" name="title" required />
+const nodemailer = require('nodemailer');
 
-      <label for="date">Datum hlášení</label>
-      <input type="date" id="date" name="date" required />
+exports.handler = async function (event, context) {
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: 'Použijte POST metodu.' }),
+    };
+  }
 
-      <label for="priority">Priorita</label>
-      <select id="priority" name="priority">
-        <option value="Nízká">Nízká</option>
-        <option value="Střední">Střední</option>
-        <option value="Vysoká">Vysoká</option>
-      </select>
+  let data;
+  try {
+    data = JSON.parse(event.body);
+  } catch (err) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: 'Neplatný JSON.' }),
+    };
+  }
 
-      <label for="description">Popis problému</label>
-      <textarea id="description" name="description" rows="4" required></textarea>
+  const { title, date, priority, description, images } = data;
 
-      <label for="images">Připojit obrázky</label>
-      <input type="file" id="images" name="images" accept="image/*" multiple />
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.seznam.cz',
+    port: 465,
+    secure: true,
+    auth: {
+      user: 'm731633234@seznam.cz',
+      pass: 'M.432336137'
+    }
+  });
 
-      <div id="preview"></div>
-
-      <button type="submit">Nahlásit</button>
-      <button type="button" id="test-button">Test</button>
-    </form>
-  </main>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-     document.getElementById('test-button').addEventListener('click', async () => {
-  const testData = {
-    title: '🧪 Testovací e-mail',
-    date: '2025-08-06',
-    priority: 'Nízká',
-    description: 'Toto je testovací zpráva pro ověření funkce.',
-    images: []
+  const mailOptions = {
+    from: '"Hlášení" <tvůj@email.cz>',
+    to: 'prijemce@email.cz',
+    subject: `🛠️ Hlášení: ${title}`,
+    text: `Datum: ${date}\nPriorita: ${priority}\n\nPopis:\n${description}`,
+    attachments: images.map(img => ({
+      filename: img.filename,
+      content: img.content,
+      encoding: img.encoding,
+    })),
   };
 
   try {
-    const response = await fetch('/.netlify/functions/send-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(testData)
-    });
-
-    const text = await response.text();
-    console.log('📦 Raw response:', text);
-
-    let result;
-    try {
-      result = JSON.parse(text);
-    } catch (err) {
-      alert('❌ Odpověď není validní JSON:\n' + text);
-      return;
-    }
-
-    if (response.ok) {
-      alert('✅ E-mail odeslán: ' + result.message);
-    } else {
-      alert('❌ Chyba: ' + result.error);
-    }
+    await transporter.sendMail(mailOptions);
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ message: 'E-mail byl úspěšně odeslán.' }),
+    };
   } catch (err) {
-    alert('⚠️ Chyba připojení: ' + err.message);
+    console.error('❌ Chyba při odesílání:', err);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Nepodařilo se odeslat e-mail.' }),
+    };
   }
-});
-
-    });
-  </script>
-</body>
-</html>
+};
